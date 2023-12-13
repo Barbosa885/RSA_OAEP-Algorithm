@@ -1,46 +1,50 @@
-# Seguranca Computacional - T3 RSA OAEP
-# David Herbert de Souza Brito - 200057405
-# Gustavo Barbosa De almeida - 202037589
-# Isabelle Alex dos Santos Basílio Caldas - 170105636
+'''
+Segurança Computacional - T3 - RSA-OAEP
+
+Integrantes:
+                David Herbert de Souza Brito - 200057405
+                Gustavo Barbosa de Almeida - 202037589
+                Isabelle Alex dos Santos Basílio Caldas - 170105636
+'''
 
 import os
 import random
-import hashlib as hl
+import hashlib as hash_lib
 import base64
 from math import ceil
 
 
-class KeyGenTools():
-    ''' Determina metodos que serao utilizados para geracao das chaves '''
+class ChaveRSA():
+    ''' Determina métodos que serão utilizados para geração das chaves '''
 
     def __init__(self):
         pass
 
-    def keygen(self, p, q, e):
-        '''Cria chave publica(e, n) e a chave privada
+    def gerar_chave(self, p, q, e):
+        '''Cria chave pública(e, n) e a chave privada
         (d, n)
         input:
-            p, q = numeros primos grandes, inteiros
-            e = exponente da chave publica, inteiro
+            p, q = números primos grandes, inteiros
+            e = expoente da chave pública, inteiro
         output:
-            chave publica, chave privada
+            chave pública, chave privada
         '''
-        assert self.prime(p, 7) and self.prime(q, 7)
+        assert self.eh_primo(p, 7) and self.eh_primo(q, 7)
         assert p != q
         n = p * q
         phi = (p - 1) * (q - 1)
-        if e != None:
-            assert self.euclid(phi, e) == 1
+        if e is not None:
+            assert self.mdc(phi, e) == 1
         else:
             while True:
                 e = random.randrange(1, phi)
-                if self.euclid(e, phi) == 1:
+                if self.mdc(e, phi) == 1:
                     break
-        d = self.modinv(e, phi)
+        d = self.modulo_inverso(e, phi)
         return ((e, n), (d, n))
 
-    def euclid(self, a, b):
-        '''Calcula o MDC(maioir divisor comum) de a e b usando o algoritimo euclidiano
+    def mdc(self, a, b):
+        '''Calcula o MDC (maior divisor comum) de a e b usando o algoritmo euclidiano
         input:
             a, b = dois inteiros desejados
         output:
@@ -50,9 +54,9 @@ class KeyGenTools():
             a, b = b, a % b
         return a
 
-    def extend_euclid(self, a, b):
+    def euclid_extendido(self, a, b):
         '''
-        Usa o algoritmo euclidiano extendido para calcular os numeros x e y para os quais:
+        Usa o algoritmo euclidiano extendido para calcular os números x e y para os quais:
 
             a * x + b * y = euclid(a, b)
 
@@ -65,29 +69,29 @@ class KeyGenTools():
         if b == 0:
             return 1, 0, a
         else:
-            x, y, q = self.extend_euclid(b, a % b)
+            x, y, q = self.euclid_extendido(b, a % b)
             return y, x - (a // b) * y, q
 
-    def modinv(self, a, b):
+    def modulo_inverso(self, a, b):
         '''
-        Calcula o modulo inverso
+        Calcula o módulo inverso
 
         input:
             a, b = dois inteiros desejados
-        otput:    
-            o modulo inverso ou None
+        output:    
+            o módulo inverso ou None
         '''
-        x, y, q = self.extend_euclid(a, b)
+        x, y, q = self.euclid_extendido(a, b)
         if q != 1:
             return None
         else:
             return x % b
 
-    def miller_Rabin_test(self, d, n):
+    def teste_miller(self, d, n):
         '''
         Executa o teste de primalidade de Miller-Rabin
         input:
-            d = numero primo d para o qual n-1 = 2*d^r
+            d = número primo d para o qual n-1 = 2*d^r
             n = inteiro que se deseja testar
         output:
             booleano indicando a primalidade de n
@@ -108,14 +112,14 @@ class KeyGenTools():
 
         return False
 
-    def prime(self, n, k):
+    def eh_primo(self, n, k):
         '''
-        Determina se o numero n eh primo
+        Determina se o número n é primo
 
         input:
             n = inteiro desejado
-            k = numero de vezes que o numero sera testado, inteiro
-        otput:    
+            k = número de vezes que o número será testado, inteiro
+        output:    
             Booleano indicando a primalidade de n
         '''
 
@@ -128,20 +132,20 @@ class KeyGenTools():
         while (d % 2 == 0):
             d //= 2
         for i in range(k):
-            if (self.miller_Rabin_test(d, n) == False):
+            if (self.teste_miller(d, n) == False):
                 return False
 
         return True
 
 
-class CryptoTools():
+class FerramentasCripto():
     ''' 
-        Determina metodos que serao utilizados no processo de encriptacao e decriptacao
+        Determina métodos que serão utilizados no processo de encriptação e decriptação
     '''
 
     def __init__(self):
         ''' hlen = comprimento do hash, inteiro'''
-        self.hlen = len(self.sha3(b''))
+        self.tam_hash = len(self.sha3(b''))
 
     def os2ip(self, x):
         '''
@@ -150,16 +154,16 @@ class CryptoTools():
         input:  
             x = bytearray
         output: 
-            inteiro correspondente nao negativo
+            inteiro correspondente não negativo
         '''
         return int.from_bytes(x, byteorder='big')
 
     def i2osp(self, x, l):
         '''
-        Converte um inteiro nao negativo em bytearray
+        Converte um inteiro não negativo em bytearray
 
         input:
-            x = inteiro nao negativo
+            x = inteiro não negativo
             l = comprimento desejado em bytes
         output:
             bytearray correspondente
@@ -168,108 +172,108 @@ class CryptoTools():
 
     def sha3(self, m):
         '''
-        encripta uma mensagem com sha3
+        Encripta uma mensagem com sha3
 
         input:
             m = mensagem para ser hasheada, bytearray
         output:
             hash correspondente, bytearray
         '''
-        hasher = hl.sha3_512()
+        hasher = hash_lib.sha3_512()
         hasher.update(m)
         return hasher.digest()
 
     def mgf(self, z, l):
         '''
-        Gera a mascara que sera utilizada na encriptacao
+        Gera a máscara que será utilizada na encriptação
         input:
             z = seed, bytearray
-            l = numero de bytes desejado, inteiro
+            l = número de bytes desejado, inteiro
         output:
-            T = mascara resultante, bytearray
+            T = máscara resultante, bytearray
         '''
         assert l < (2**32)
 
         T = b""
 
-        for i in range(ceil(l / self.hlen)):
+        for i in range(ceil(l / self.tam_hash)):
             C = self.i2osp(i, 4)
             T += self.sha3(z + C)
         return T[:l]
 
-    def bitwise_xor(self, data, mask):
+    def xor_bitwise(self, data, mask):
         '''
-        Aplica a mascara "mask" em um bytearray "data" atraves de um xor bit a bit
+        Aplica a máscara "mask" em um bytearray "data" através de um xor bit a bit
 
         input:
             data = data, bytearray
-            mask = mascara, bytearray 
+            mask = máscara, bytearray 
         output:
-            T = bytearray com a mascara aplicada, bytearray
+            T = bytearray com a máscara aplicada, bytearray
         '''
-        masked = b''
+        mascarado = b''
         ldata = len(data)
         lmask = len(mask)
         for i in range(max(ldata, lmask)):
             if i < ldata and i < lmask:
-                masked += (data[i] ^ mask[i]).to_bytes(1, byteorder='big')
+                mascarado += (data[i] ^ mask[i]).to_bytes(1, byteorder='big')
             elif i < ldata:
-                masked += data[i].to_bytes(1, byteorder='big')
+                mascarado += data[i].to_bytes(1, byteorder='big')
             else:
                 break
-        return masked
+        return mascarado
 
 
-class Encrypt(CryptoTools):
-    '''Define metodos que serao utilizados para a encriptacao RSA-OAEP'''
+class Encriptar(FerramentasCripto):
+    '''Define métodos que serão utilizados para a encriptação RSA-OAEP'''
 
-    def oaep_encode(self, m, k, label=b''):
+    def oaep_codificar(self, mensagem, k, rotulo=b''):
         '''
-        Usa o algoritmo oaep para encriptar a mensagem "m"
+        Usa o algoritmo oaep para encriptar a mensagem "mensagem"
 
         input:
-            m = mensagem, bytearray
-            k = tamanho da chave publica em bytes, inteiro
+            mensagem = mensagem, bytearray
+            k = tamanho da chave pública em bytes, inteiro
         output:
             mensagem encriptada, bytearray 
         '''
-        mlen = len(m)
-        lhash = self.sha3(label)
-        ps = b'\x00' * (k - mlen - 2 * self.hlen - 2)
-        db = lhash + ps + b'\x01' + m
-        seed = os.urandom(self.hlen)
-        db_mask = self.mgf(seed, k - self.hlen - 1)
-        masked_db = self.bitwise_xor(db, db_mask)
-        seed_mask = self.mgf(masked_db, self.hlen)
-        masked_seed = self.bitwise_xor(seed, seed_mask)
-        return b'\x00' + masked_seed + masked_db
+        tam_mensagem = len(mensagem)
+        hash_l = self.sha3(rotulo)
+        ps = b'\x00' * (k - tam_mensagem - 2 * self.tam_hash - 2)
+        db = hash_l + ps + b'\x01' + mensagem
+        seed = os.urandom(self.tam_hash)
+        db_mascara = self.mgf(seed, k - self.tam_hash - 1)
+        db_mascarado = self.xor_bitwise(db, db_mascara)
+        seed_mascara = self.mgf(db_mascarado, self.tam_hash)
+        seed_mascarado = self.xor_bitwise(seed, seed_mascara)
+        return b'\x00' + seed_mascarado + db_mascarado
 
-    def encrypt_rsa_oaep(self, m, public_key):
+    def encriptar_rsa_oaep(self, mensagem, chave_publica):
         '''
-        Encripta a mensagem "m" utilizando o algoritmo RSA modelo OAEP
+        Encripta a mensagem "mensagem" utilizando o algoritmo RSA modelo OAEP
 
         input:
-            m = mensagem, bytearray
-            public_key = chave publica, bytearray
+            mensagem = mensagem, bytearray
+            chave_publica = chave pública, bytearray
         output:
             mensagem encriptada, bytearray
             assinatura da mensagem, bytearray
         '''
-        k = ceil((public_key[1]).bit_length() / 8)
+        k = ceil((chave_publica[1]).bit_length() / 8)
 
-        assert len(m) <= k - self.hlen - 2
+        assert len(mensagem) <= k - self.tam_hash - 2
 
-        e, n = public_key
-        c = self.oaep_encode(m, k)
+        e, n = chave_publica
+        c = self.oaep_codificar(mensagem, k)
         c = pow(self.os2ip(c), e, n)
 
         return self.i2osp(c, k)
 
 
-class Decrypt(CryptoTools):
-    '''Define metodos que serao utilizados para a decriptacao RSA-OAEP'''
+class Desencriptar(FerramentasCripto):
+    '''Define métodos que serão utilizados para a decriptação RSA-OAEP'''
 
-    def oaep_decode(self, c, k, label=b''):
+    def oaep_decodificar(self, c, k, rotulo=b''):
         '''EME-OAEP decoding
         Usa o algoritmo oaep para decriptar a mensagem "c"
 
@@ -279,16 +283,16 @@ class Decrypt(CryptoTools):
         output:
             mensagem decriptada, bytearray
         '''
-        lhash = self.sha3(label)
-        _, masked_seed, masked_db = c[:1], c[1:1 +
-                                             self.hlen], c[1 + self.hlen:]
-        seed_mask = self.mgf(masked_db, self.hlen)
-        seed = self.bitwise_xor(masked_seed, seed_mask)
-        db_mask = self.mgf(seed, k - self.hlen - 1)
-        db = self.bitwise_xor(masked_db, db_mask)
-        _lhash = db[:self.hlen]
-        assert lhash == _lhash
-        i = self.hlen
+        hash_l = self.sha3(rotulo)
+        _, seed_mascarada, db_mascarado = c[:1], c[1:1 +
+                                                  self.tam_hash], c[1 + self.tam_hash:]
+        seed_mascara = self.mgf(db_mascarado, self.tam_hash)
+        seed = self.xor_bitwise(seed_mascarada, seed_mascara)
+        db_mascara = self.mgf(seed, k - self.tam_hash - 1)
+        db = self.xor_bitwise(db_mascarado, db_mascara)
+        _hash_l = db[:self.tam_hash]
+        assert hash_l == _hash_l
+        i = self.tam_hash
         while i < len(db):
             if db[i] == 0:
                 i += 1
@@ -298,256 +302,250 @@ class Decrypt(CryptoTools):
                 break
             else:
                 raise Exception()
-        m = db[i:]
-        return m
+        mensagem = db[i:]
+        return mensagem
 
-    def decrypt_rsa_oaep(self, c, private_key):
+    def desencriptar_rsa_oaep(self, c, chave_privada):
         '''Decrypt a cipher byte array with OAEP padding
         Decripta a mensagem "c" utilizando o algoritmo RSA modelo OAEP
 
         input:
             c = mensagem, bytearray
-            private_key = chave privada, bytearray
+            chave_privada = chave privada, bytearray
         output:
             mensagem decriptada, bytearray
         '''
-        k = ceil((private_key[1]).bit_length() / 8)
+        k = ceil((chave_privada[1]).bit_length() / 8)
         assert len(c) == k
-        assert k >= 2 * self.hlen + 2
+        assert k >= 2 * self.tam_hash + 2
 
-        d, n = private_key
-        m = pow(self.os2ip(c), d, n)
-        m = self.i2osp(m, k)
+        d, n = chave_privada
+        mensagem = pow(self.os2ip(c), d, n)
+        mensagem = self.i2osp(mensagem, k)
 
-        return self.oaep_decode(m, k)
+        return self.oaep_decodificar(mensagem, k)
 
-
-class Receiver(KeyGenTools, Decrypt):
+class Receptor(ChaveRSA, Desencriptar):
     '''
-    Responsavel por receber a mensagem encripitada, decripita-la e testa-la com a Assinatura
+    Responsável por receber a mensagem encriptada, decriptá-la e testá-la com a Assinatura
     '''
 
-    def __init__(self, newKey=True):
-        '''construtor da classe Receiver
+    def __init__(self, novaChave=True):
+        '''Construtor da classe Receptor
         input:
-            newKey = indica se uma nova chave sera gerada, booleano
+            novaChave = indica se uma nova chave será gerada, booleano
         '''
         e = 0x010001
 
-        if newKey:
+        if novaChave:
             print("Gerando chaves(0/2)...")
             p = 1
-            while (not self.prime(p, 7)):
+            while (not self.eh_primo(p, 7)):
                 p = random.randint(2**1023, 2**1024)
             print("Gerando chaves(1/2)...")
             q = 1
-            while (not self.prime(q, 7)) or p == q:
+            while (not self.eh_primo(q, 7)) or p == q:
                 q = random.randint(2**1023, 2**1024)
             print("Gerando chaves(2/2)...")
-            print("Geracao completa!")
+            print("Geração completa!")
             # salvar nova chave
             print("Selecione um nome para o novo arquivo de chaves:\n")
             print(
-                "Aviso: nao usar caracteres especiais ou especificar a extensao do arquivo")
+                "Aviso: não usar caracteres especiais ou especificar a extensão do arquivo")
             print("Exemplo de entrada: >exemplo\n")
-            name = str(input(">"))
-            self.name = name
-            with open(name + ".txt", "w+") as f:
+            nome = str(input(">"))
+            self.nome = nome
+            with open(nome + ".txt", "w+") as f:
                 f.write(str(p) + "\n")
                 f.write(str(q) + "\n")
         else:
             # usar chave antiga
             print("Digite o arquivo de chave que deseja utilizar\n")
             print(
-                "Aviso: nao usar caracteres especiais ou especificar a extensao do arquivo")
+                "Aviso: não usar caracteres especiais ou especificar a extensão do arquivo")
             print("Exemplo de entrada: >exemplo\n")
-            name = str(input(">"))
-            self.name = name
-            with open(name + ".txt", "r") as f:
+            nome = str(input(">"))
+            self.nome = nome
+            with open(nome + ".txt", "r") as f:
                 if f:
                     p = int(f.readline())
                     q = int(f.readline())
         print("----------------Primos em hexadecimal----------------------")
         print("primo 1:", hex(p))
         print("primo 2:", hex(q))
-        KeyGenTools.__init__(self)
-        Decrypt.__init__(self)
-        self.pubkey, self.privkey = self.keygen(p, q, e)
-        print("---------------Chaves de criptacao --------------")
-        print("Chave publica:", self.pubkey)
-        print("Chave privada:\n\n", self.privkey[0])
+        ChaveRSA.__init__(self)
+        Desencriptar.__init__(self)
+        self.chavePublica, self.chavePrivada = self.gerar_chave(p, q, e)
+        print("---------------Chaves de criptação --------------")
+        print("Chave pública:", self.chavePublica)
+        print("Chave privada:\n\n", self.chavePrivada[0])
 
-    def start_connection(self):
-        '''inicia a conexao entre remetente e receiver instanciando o Server'''
-        self.Server = [Server(self.pubkey, self.name)]
-        return self.Server
+    def iniciarConexao(self):
+        '''Inicia a conexão entre sender e receiver instanciando o server'''
+        self.servidor = [Servidor(self.chavePublica, self.nome)]
+        return self.servidor
 
-    def decrypt_message(self):
-        '''decripta a mensagem armazenada no Server'''
-        signature, message = self.Server[0].get_message()
-        d, n = self.Server[0].pubkeySender
-        decrypted_message = self.decrypt_rsa_oaep(
-            message, self.privkey)
+    def decriptarMensagem(self):
+        '''Decripta a mensagem armazenada no server'''
+        assinatura, mensagem = self.servidor[0].pegarMensagem()
+        d, n = self.servidor[0].chavePublicaRemetente
+        mensagemDecriptada = self.desencriptar_rsa_oaep(mensagem, self.chavePrivada)
 
-        # print(signature)
+        s = self.i2osp(pow(self.os2ip(assinatura), d, n), 64)
 
-        s = self.i2osp(pow(self.os2ip(signature), d, n), 64)
-
-        if(s == self.sha3(decrypted_message)):
+        if(s == self.sha3(mensagemDecriptada)):
             print("Mensagem recebida com sucesso!!")
-            print("Mensagem decriptada:", decrypted_message.decode("utf-8"), "\n")
+            print("Mensagem decriptada:", mensagemDecriptada.decode("utf-8"), "\n")
             print("---------------------------------------------")
         else:
-            print("ERRO: Assinatura da mensagem incompativel.")
+            print("ERRO: Assinatura da mensagem incompatível.")
 
 
-class Server():
+class Servidor():
     '''
-    Determina a comunicacao entre Remetente e Receiver, garantindo acesso apenas a mensagem encriptada e a chave publica de ambos
+    Determina a comunicação entre Sender e Receiver, garantindo acesso apenas à mensagem encriptada e à chave pública de ambos
     '''
 
-    def __init__(self, pubkeyReceiver, name):
-        '''construtor da classe destinatario'''
-        self.pubkeyReceiver = pubkeyReceiver
-        self.name = name
+    def __init__(self, chavePublicaReceptor, nome):
+        '''Construtor da classe servidor'''
+        self.chavePublicaReceptor = chavePublicaReceptor
+        self.nome = nome
 
-    def set_message(self, signature, cryptedMessage):
-        '''grava a mensagem e a assinatura no .txt correspondente
+    def definirMensagem(self, assinatura, mensagemEncriptada):
+        '''Grava a mensagem e a assinatura no .txt correspondente
         input: 
-            signature, cryptedMessage = bytearrays
+            assinatura, mensagemEncriptada = bytearrays
         '''
-        self.cryptedMessage = cryptedMessage
-        # print(signature)
-        base64EncodedStr = base64.b64encode(cryptedMessage)
-        base64EncodedStrS = base64.b64encode(signature)
-        with open('mensagem' + self.name + '.txt', 'w+') as f:
-            print("Assinatura da mensagem:", base64EncodedStrS.decode('utf-8'))
+        self.mensagemEncriptada = mensagemEncriptada
+        # print(assinatura)
+        base64StringCodificada = base64.b64encode(mensagemEncriptada)
+        base64StringSCodificada = base64.b64encode(assinatura)
+        with open('mensagem' + self.nome + '.txt', 'w+') as f:
+            print("Assinatura da mensagem:", base64StringSCodificada.decode('utf-8'))
             print("Mensagem encriptada: " +
-                  base64EncodedStr.decode('utf-8')+"\n")
-            f.write(base64EncodedStrS.decode('utf-8')+"\n")
-            f.write(base64EncodedStr.decode('utf-8'))
+                  base64StringCodificada.decode('utf-8')+"\n")
+            f.write(base64StringSCodificada.decode('utf-8')+"\n")
+            f.write(base64StringCodificada.decode('utf-8'))
 
-    def get_message(self):
-        '''le a mensagem gravada no txt correspondente
+    def pegarMensagem(self):
+        '''Lê a mensagem gravada no txt correspondente
         output:
-            signature, message = assinatura e mensagem encriptada, bytearray
+            assinatura, mensagem = assinatura e mensagem encriptada, bytearray
         '''
-        with open('mensagem'+self.name+'.txt', 'r') as f:
+        with open('mensagem'+self.nome+'.txt', 'r') as f:
             if not f:
                 print('ERRO: Arquivo de mensagem inexistente')
                 return None
             else:
                 m = f.readline()
-                signature = base64.b64decode(m.encode("utf-8"))
+                assinatura = base64.b64decode(m.encode("utf-8"))
                 m = f.readline()
-                message = base64.b64decode(m.encode("utf-8"))
-                return signature, message
+                mensagem = base64.b64decode(m.encode("utf-8"))
+                return assinatura, mensagem
 
-    # sets e gets para valores especificos
-    def set_pubkeySender(self, pubkeySender): self.pubkeySender = pubkeySender
-    def get_e(self): return self.e
-    def get_n(self): return self.n
+    # sets e gets para valores específicos
+    def definirChavePublicaRemetente(self, chavePublicaRemetente): self.chavePublicaRemetente = chavePublicaRemetente
+    def pegar_e(self): return self.e
+    def pegar_n(self): return self.n
 
 
-class Remetente(Encrypt, KeyGenTools):
+class Remetente(Encriptar, ChaveRSA):
     '''
-    Responsavel por encripitar a mensagem e a assinatura e envia-las ao receptor
+    Responsável por encriptar a mensagem e a assinatura e enviá-las ao servidor
     '''
 
-    def __init__(self, Server):
-        '''construtor da classe remetente
+    def __init__(self, servidor):
+        '''Construtor da classe remetente
         input:
-            Server = ponteiro para acessar o Server
-           instanciado pela classe Receiver, lista com um objeto Server instanciado, [Server]
+            servidor = ponteiro para acessar o Servidor instanciado pela classe Receptor, lista com um objeto servidor instanciado, [Servidor]
         '''
-        self.Server = Server
-        '''p e q sao primos grandes constantes que criarao a chave privada e publica do Server para ser utilizada na assinatura'''
+        self.servidor = servidor
+        '''p e q são primos grandes constantes que criarão a chave privada e pública do servidor para ser utilizada na assinatura'''
         e = 0x010001
         p = 97962796904280205888084811562964488190962410580438986602772964729043975540681631621472675024214515491932452297662896068200477857556195577301442157032294788012249197257876876439702478794510158895189770668271842399008851096255918615617091562859396319516675952918545998915860198564813082383638996319228274522199
         q = 179254215470244753801670806037636828877229308262366906189173021362198522014648917380717440609954562680936353318826278100387818010717325117950339338189158413352932790197268235586554618256304106325838871838101470934772890880184013442978003681873677779889327057473152412199836756580050573796447220026994889221457
         super().__init__()
-        self.pubkey, self.privkey = self.keygen(p, q, e)
-        self.Server[0].set_pubkeySender(self.pubkey)
+        self.chavePublica, self.chavePrivada = self.gerar_chave(p, q, e)
+        self.servidor[0].definirChavePublicaRemetente(self.chavePublica)
 
-    def encript_message(self, message):
-        '''encripta a mensagem desejada
+    def criptMensagem(self, mensagem):
+        '''Encripta a mensagem desejada
         input:
-            message = mensagem desejada, string
+            mensagem = mensagem desejada, string
         '''
-        signature = self.create_signature(message)
-        cryptedMessage = self.encrypt_rsa_oaep(
-            message.encode('utf-8'), self.Server[0].pubkeyReceiver)
-        # print((cryptedMessage))
-        self.Server[0].set_message(signature, cryptedMessage)
+        assinatura = self.criarAssinatura(mensagem)
+        mensagemEncriptada = self.encriptar_rsa_oaep(mensagem.encode('utf-8'), self.servidor[0].chavePublicaReceptor)
+        self.servidor[0].definirMensagem(assinatura, mensagemEncriptada)
 
-    def create_signature(self, message):
-        '''gera a assinatura da mensagem
+    def criarAssinatura(self, mensagem):
+        '''Gera a assinatura da mensagem
         input:
-            message = mensagem desejada, string
+            mensagem = mensagem desejada, string
         output: 
             s = assinatura da mensagem, bytearray 
         '''
-        e, n = self.privkey
+        e, n = self.chavePrivada
         s = self.i2osp(
-            pow(self.os2ip(self.sha3(message.encode("utf-8"))), e, n), 256)
+            pow(self.os2ip(self.sha3(mensagem.encode("utf-8"))), e, n), 256)
 
         return s
 
 
-def clear_console():
+def limparConsole():
     '''
-    Funcao que limpa o terminal
+    Função que limpa o terminal
     '''
-    command = 'clear'
+    comando = 'clear'
     if os.name in ('nt', 'dos'):  # If Machine is running on Windows, use cls
-        command = 'cls'
-    os.system(command)
+        comando = 'cls'
+    os.system(comando)
 
 
 def main():
-    mainInterface = "Bem-vindo ao encriptador e decriptador de RSA-OAEP!\n\n"
-    mainInterface += "\tEste programa implementa um algoritmo RSA tipo OAEP e replica como seria uma aplicação deste algoritmo na comunicação em um servidor\n\n"
-    mainInterface += "O que você deseja fazer? Escolha uma das opções abaixo:\n"
-    mainInterface += "\t1 - Encriptar uma mensagem\n"
-    mainInterface += "\t2 - Decriptar uma mensagem\n"
-    mainInterface += "\tS - Sair\n\n"
-    mainOpt = None
-    while not (mainOpt == 's' or mainOpt == 'S'):
-        mainOpt = str(input(mainInterface + ">"))
-        if mainOpt == '1':
-            clear_console()
+    interfacePrincipal = "Bem-vindo ao encriptador e decriptador de RSA-OAEP!\n\n"
+    interfacePrincipal += "\tEste programa implementa um algoritmo RSA tipo OAEP e replica como seria uma aplicação deste algoritmo na comunicação em um servidor utilizando orientação a objetos\n\n"
+    interfacePrincipal += "Selecione uma das opções:\n"
+    interfacePrincipal += "\t1 - Encriptar uma mensagem\n"
+    interfacePrincipal += "\t2 - Decriptar uma mensagem\n"
+    interfacePrincipal += "\tS - Sair\n\n"
+    opcaoPrincipal = None
+    while not (opcaoPrincipal == 's' or opcaoPrincipal == 'S'):
+        opcaoPrincipal = str(input(interfacePrincipal + ">"))
+        if opcaoPrincipal == '1':
+            limparConsole()
             print("Deseja utilizar uma chave de sessão já definida anteriormente?(y/n)")
             if(str(input(">")) == "n"):
-                receiver = Receiver(newKey=True)
+                receptor = Receptor(novaChave=True)
             else:
-                avisoInterface = "Aviso: a mensagem encriptada em com essa chave anteriormente será sobrescrita, desejas continuar? (y/n) "
+                avisoInterface = "Aviso: a mensagem encriptada com essa chave anteriormente será sobrescrita, desejas continuar? (y/n) "
                 if(str(input(avisoInterface + ">")) != "y"):
                     continue
-                clear_console()
-                receiver = Receiver(newKey=False)
+                limparConsole()
+                receptor = Receptor(novaChave=False)
             print("Conexão entre remetente e receptor criada")
-            remetente = Remetente(receiver.start_connection())
+            remetente = Remetente(receptor.iniciarConexao())
 
-            cryptInterface = "Defina qual mensagem deve ser encriptada:\n"
-            remetente.encript_message(str(input(cryptInterface + ">")))
-        elif mainOpt == '2':
+            interfaceEncriptacao = "Defina qual mensagem deve ser encriptada:\n"
+            remetente.criptMensagem(str(input(interfaceEncriptacao + ">")))
+        elif opcaoPrincipal == '2':
             try:
-                receiver = Receiver(newKey=False)
+                receptor = Receptor(novaChave=False)
             except:
-                clear_console()
+                limparConsole()
                 print('ERRO: Arquivo de chave inexistente\n')
                 continue
-            remetente = Remetente(receiver.start_connection())
+            remetente = Remetente(receptor.iniciarConexao())
             try:
-                receiver.decrypt_message()
+                receptor.decriptarMensagem()
             except AssertionError:
                 print("ERRO: chave incompatível")
             except FileNotFoundError:
                 print("ERRO: arquivo de mensagem inexistente")
-        elif not (mainOpt == 's' or mainOpt == 'S'):
-            clear_console()
+        elif not (opcaoPrincipal == 's' or opcaoPrincipal == 'S'):
+            limparConsole()
             print("ERRO: Opção inexistente\n\n")
 
 
 if __name__ == "__main__":
-    main()
+  main()
+
